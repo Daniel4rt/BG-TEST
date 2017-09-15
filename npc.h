@@ -70,7 +70,7 @@ struct npc_data {
 		struct {
 			struct script_code *script;
 			short xs,ys; // OnTouch area radius
-			int guild_id;
+			int guild_id, bg_id;
 			int timer,timerid,timeramount,rid;
 			unsigned int timertick;
 			struct npc_timerevent_list *timer_event;
@@ -144,6 +144,7 @@ enum npce_event {
 	NPCE_KILLPC,
 	NPCE_KILLNPC,
 	NPCE_STATCALC,
+	NPCE_CONSUME,
 	NPCE_MAX
 };
 struct view_data* npc_get_viewdata(int class_);

@@ -507,6 +507,17 @@ extern struct Battle_Config
 	int bg_magic_damage_rate;
 	int bg_misc_damage_rate;
 	int bg_flee_penalty;
+ 	int bg_idle_announce;
+ 	int bg_idle_autokick;
+ 	int bg_reserved_char_id;
+ 	int bg_items_on_pvp;
+ 	int bg_reward_rates;
+ 	int bg_reportafk_leaderonly;
+ 	int bg_queue2team_balanced;
+ 	int bg_logincount_check;
+ 	int bg_queue_onlytowns;
+	int bg_kafrapoints;
+	int bg_remasterized;
 
 	// rAthena
 	int max_third_parameter;
@@ -615,6 +626,7 @@ extern struct Battle_Config
 	int exp_cost_inspiration;
 	int mvp_exp_reward_message;
 	int can_damage_skill; //Which BL types can damage traps
+	int reserved_costume_id;
 	int atcommand_levelup_events;
 	int block_account_in_same_party;
 	int tarotcard_equal_chance; //Official or equal chance for each card

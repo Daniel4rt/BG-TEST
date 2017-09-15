@@ -637,7 +637,7 @@ typedef enum sc_type {
 	SC_KAGEMUSYA,
 	SC_ZANGETSU,
 	SC_GENSOU,
-	SC_AKAITSUKI,
+	SC_AKAITSUKI, //542
 
 	//homon S
 	SC_STYLE_CHANGE,
@@ -672,7 +672,7 @@ typedef enum sc_type {
 	SC_ILLUSIONDOPING,
 	SC_FLASHCOMBO,
 	SC_MOONSTAR,
-	SC_SUPER_STAR,
+	SC_SUPER_STAR, // 574
 
 	/**
 	 * Rebellion [Cydh]
@@ -685,17 +685,17 @@ typedef enum sc_type {
 	SC_ANTI_M_BLAST,
 	SC_B_TRAP,
 	SC_H_MINE,
-	SC_QD_SHOT_READY,
+	SC_QD_SHOT_READY, // 583
 
 	SC_MTF_ASPD,
 	SC_MTF_RANGEATK,
 	SC_MTF_MATK,
 	SC_MTF_MLEATKED,
-	SC_MTF_CRIDAMAGE,
+	SC_MTF_CRIDAMAGE, // 588
 
 	SC_OKTOBERFEST,
 	SC_STRANGELIGHTS,
-	SC_DECORATION_OF_MUSIC,
+	SC_DECORATION_OF_MUSIC, // 591
 
 	SC_QUEST_BUFF1,
 	SC_QUEST_BUFF2,
@@ -722,7 +722,7 @@ typedef enum sc_type {
 	SC_MTF_HITFLEE,
 
 	SC_CRIFOOD,
-	SC_ATTHASTE_CASH,
+	SC_ATTHASTE_CASH, // 611
 
 	// Item Reuse Limits
 	SC_REUSE_LIMIT_A,
@@ -744,7 +744,7 @@ typedef enum sc_type {
 
 	SC_PROMOTE_HEALTH_RESERCH,
 	SC_ENERGY_DRINK_RESERCH,
-	SC_NORECOVER_STATE,
+	SC_NORECOVER_STATE, // 630
 
 	/**
 	 * Summoner
@@ -781,14 +781,14 @@ typedef enum sc_type {
 	SC_GVG_SLEEP,
 	SC_GVG_CURSE,
 	SC_GVG_SILENCE,
-	SC_GVG_BLIND,
+	SC_GVG_BLIND, // 663
 
 	SC_CLAN_INFO,
 	SC_SWORDCLAN,
 	SC_ARCWANDCLAN,
 	SC_GOLDENMACECLAN,
 	SC_CROSSBOWCLAN,
-	SC_JUMPINGCLAN,
+	SC_JUMPINGCLAN, // 669
 
 	SC_TAROTCARD,
 
@@ -805,7 +805,7 @@ typedef enum sc_type {
 	SC_DAILYSENDMAILCNT,
 
 	SC_DORAM_BUF_01,
-	SC_DORAM_BUF_02,
+	SC_DORAM_BUF_02, // 680
 
 	/**
 	 * Summoner - Extended
@@ -818,10 +818,13 @@ typedef enum sc_type {
 	SC_DORAM_WALKSPEED,
 	SC_DORAM_MATK,
 	SC_DORAM_FLEE2,
-	SC_DORAM_SVSP,
-
-#ifdef RENEWAL
-	SC_EXTREMITYFIST2, //! NOTE: This SC should be right before SC_MAX, so it doesn't disturb if RENEWAL is disabled
+	SC_DORAM_SVSP, // 689
+	/**
+	 * Rain
+	 **/
+	SC_RAIN = 699,
+#ifdef RENEWAL // Redef if rain remove [DanielArt]
+	SC_EXTREMITYFIST2 = 690, //! NOTE: This SC should be right before SC_MAX, so it doesn't disturb if RENEWAL is disabled
 #endif
 	SC_MAX, //Automatically updated max, used in for's to check we are within bounds.
 } sc_type;
@@ -1768,6 +1771,8 @@ enum si_type {
 	SI_EP16_2_BUFF_SC = 964,
 	SI_EP16_2_BUFF_AC = 965,
 	SI_GS_MAGICAL_BULLET = 966,
+
+	SI_RAIN	= 970,
 
 	SI_FALLEN_ANGEL = 976,
 

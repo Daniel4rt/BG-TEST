@@ -16,6 +16,7 @@
 #include "map.h"
 #include "atcommand.h"
 #include "battle.h"
+#include "battleground.h" // DNA
 #include "chat.h"
 #include "channel.h"
 #include "chrif.h"
@@ -1209,7 +1210,7 @@ ACMD_FUNC(heal)
 ACMD_FUNC(item)
 {
 	char item_name[100];
-	int number = 0, bound = BOUND_NONE;
+	int number = 0, bound = BOUND_NONE, costume = 0;
 	char flag = 0;
 	struct item item_tmp;
 	struct item_data *item_data[10];
@@ -1258,6 +1259,27 @@ ACMD_FUNC(item)
 
 	for(j--; j>=0; j--){ //produce items in list
 		unsigned short item_id = item_data[j]->nameid;
+		if (!strcmpi(command + 1, "costumeitem"))
+		{
+			if (!battle_config.reserved_costume_id)
+			{
+				clif_displaymessage(fd, "Costume convertion is disable. Set a value for reserved_cosutme_id on your battle.conf file.");
+				return -1;
+			}
+			if (!(item_data[j]->equip&EQP_HEAD_LOW) &&
+				!(item_data[j]->equip&EQP_HEAD_MID) &&
+				!(item_data[j]->equip&EQP_HEAD_TOP) &&
+				!(item_data[j]->equip&EQP_COSTUME_HEAD_LOW) &&
+				!(item_data[j]->equip&EQP_COSTUME_HEAD_MID) &&
+				!(item_data[j]->equip&EQP_COSTUME_HEAD_TOP) &&
+				!(item_data[j]->equip&EQP_GARMENT) &&
+				!(item_data[j]->equip&EQP_COSTUME_GARMENT))
+			{
+				clif_displaymessage(fd, "No puedes hacer Costume este item. Los Costume son solo para headgears. (Cascos)");
+				return -1;
+			}
+			costume = 1;
+		}
 		//Check if it's stackable.
 		if (!itemdb_isstackable2(item_data[j]))
 			get_count = 1;
@@ -1268,6 +1290,11 @@ ACMD_FUNC(item)
 				memset(&item_tmp, 0, sizeof(item_tmp));
 				item_tmp.nameid = item_id;
 				item_tmp.identify = 1;
+				if (costume == 1) { // Costume item
+					item_tmp.card[0] = CARD0_CREATE;
+					item_tmp.card[2] = GetWord(battle_config.reserved_costume_id, 0);
+					item_tmp.card[3] = GetWord(battle_config.reserved_costume_id, 1);
+				}
 				item_tmp.bound = bound;
 				if ((flag = pc_additem(sd, &item_tmp, get_count, LOG_TYPE_COMMAND)))
 					clif_additem(sd, 0, 0, flag);
@@ -3587,6 +3614,50 @@ ACMD_FUNC(agitend3)
 	}
 }
 
+ACMD_FUNC(bgstart) {
+	nullpo_retr(-1, sd);
+	if (bg_flag) {
+		clif_displaymessage(fd, "Battleground is currently in progress.");
+		return -1;
+	}
+
+	bg_flag = true;
+	bg_start();
+	clif_displaymessage(fd, "Battleground has been initiated"); // Battleground has been initiated.
+
+	return 0;
+}
+
+ACMD_FUNC(bgend) {
+	nullpo_retr(-1, sd);
+	if (!bg_flag) {
+		clif_displaymessage(fd, "Battleground is currently not in progress.");
+		return -1;
+	}
+
+	bg_flag = false;
+	bg_end();
+	clif_displaymessage(fd, "Battleground has been ended.");
+
+	return 0;
+}
+
+ACMD_FUNC(listenbg)
+{
+	if( sd->state.bg_listen )
+	{
+		sd->state.bg_listen = 0;
+		clif_displaymessage(fd, "You will not receive Battleground announcements.");
+	}
+	else
+	{
+		sd->state.bg_listen = 1;
+		clif_displaymessage(fd, "You will receive Battleground announcements.");
+	}
+
+	return 0;
+}
+
 /*==========================================
  * @mapexit - shuts down the map server
  *------------------------------------------*/
@@ -5485,6 +5556,106 @@ ACMD_FUNC(follow)
 	return 0;
 }
 
+/*==========================================
++ * Battleground Leader Commands
++ *------------------------------------------*/
+ACMD_FUNC(order)
+{
+	nullpo_retr(-1,sd);
+	if( !message || !*message )
+	{
+		clif_displaymessage(fd, "Please, enter a message (usage: @order <message>).");
+		return -1;
+	}
+
+	if( map[sd->bl.m].flag.battleground )
+	{
+		if( !sd->bmaster_flag )
+		{
+			clif_displaymessage(fd, "This command is reserved for Team Leaders Only.");
+			return -1;
+		}
+		clif_broadcast2(&sd->bl, message, (int)strlen(message)+1, sd->bmaster_flag->color, 0x190, 20, 0, 0, BG);
+	}
+	else
+	{
+		if( !sd->state.gmaster_flag )
+		{
+			clif_displaymessage(fd, "This command is reserved for Guild Leaders Only.");
+			return -1;
+		}
+		clif_broadcast2(&sd->bl, message, (int)strlen(message)+1, 0xFF0000, 0x190, 20, 0, 0, GUILD);
+	}
+
+	return 0;
+}
+
+ACMD_FUNC(leader)
+{
+	struct map_session_data *pl_sd;
+	nullpo_retr(-1,sd);
+	if( !sd->bmaster_flag )
+		clif_displaymessage(fd, "Este comando esta reservado para lideres de equipo solamente.");
+	else if( sd->ud.skilltimer != INVALID_TIMER )
+		clif_displaymessage(fd, "No esta permitido usar la habilidad mientras usas una habilidad.");
+	else if( !message || !*message )
+		clif_displaymessage(fd, "Por favor, escribe el nombre del nuevo lider (uso: @leader <nombre>).");
+	else if( (pl_sd = map_nick2sd((char *)message,false)) == NULL )
+		clif_displaymessage(fd, "Personaje no encontrado"); // Character not found.
+	else if( sd->bg_id != pl_sd->bg_id )
+		clif_displaymessage(fd, "El nombre del jugador escrito no se encuentra en tu equipo.");
+	else if( sd == pl_sd )
+		clif_displaymessage(fd, "No puedes renombrarte como lider, ya lo eres.");
+	else
+	{ // Everytest OK!
+		sprintf(atcmd_output, "El liderazgo del equipo se ha transferido a [%s]", pl_sd->status.name);
+		clif_broadcast2(&sd->bl, atcmd_output, (int)strlen(atcmd_output)+1, sd->bmaster_flag->color, 0x190, 20, 0, 0, BG);
+
+		sd->bmaster_flag->leader_char_id = pl_sd->status.char_id;
+		pl_sd->bmaster_flag = sd->bmaster_flag;
+		sd->bmaster_flag = NULL;
+
+		clif_charnameupdate(sd);
+		clif_charnameupdate(pl_sd);
+		return 0;
+	}
+	return -1;
+}
+
+ACMD_FUNC(reportafk)
+{
+	struct map_session_data *pl_sd;
+	nullpo_retr(-1,sd);
+	if( !sd->bg_id )
+		clif_displaymessage(fd, "Este comando esta reservado para Battleground.");
+	else if( !sd->bmaster_flag && battle_config.bg_reportafk_leaderonly )
+		clif_displaymessage(fd, "Este comando es para lideres de equipo.");
+	else if( !message || !*message )
+		clif_displaymessage(fd, "Por favor, escribe el nombre del usuario a reportar (uso: @reportafk <nombre>).");
+	else if( (pl_sd = map_nick2sd((char *)message,false)) == NULL )
+		clif_displaymessage(fd, "Personaje no encontrado."); // Character not found.
+	else if( sd->bg_id != pl_sd->bg_id )
+		clif_displaymessage(fd, "Este personaje no esta en tu equipo.");
+	else if( sd == pl_sd )
+		clif_displaymessage(fd, "No te puedes expulsar a ti mismo.");
+	else if( pl_sd->state.bg_afk == 0 )
+		clif_displaymessage(fd, "El jugador no esta AFK en la partida.");
+	else
+	{ // Everytest OK!
+		struct battleground_data *bg;
+		if( (bg = bg_team_search(sd->bg_id)) == NULL )
+			return -1;
+
+		bg_team_leave(pl_sd,2);
+		clif_displaymessage(pl_sd->fd, "Haz sido expulsado de Battleground por permanecer AFK.");
+		pc_setpos(pl_sd,pl_sd->status.save_point.map,pl_sd->status.save_point.x,pl_sd->status.save_point.y,3);
+
+		sprintf(atcmd_output, "- AFK > [%s] ha expulsado -", pl_sd->status.name);
+		clif_broadcast2(&sd->bl, atcmd_output, (int)strlen(atcmd_output)+1, bg->color, 0x190, 20, 0, 0, BG);
+		return 0;
+	}
+	return -1;
+}
 
 /*==========================================
  * @dropall by [MouseJstr] and [Xantara]
@@ -10269,6 +10440,15 @@ void atcommand_basecommands(void) {
 		ACMD_DEF(adopt),
 		ACMD_DEF(agitstart3),
 		ACMD_DEF(agitend3),
+		/**
+		* Battleground
+		**/
+		ACMD_DEF(order),
+		ACMD_DEF(leader),
+		ACMD_DEF(reportafk),
+		ACMD_DEF(bgstart),
+		ACMD_DEF(bgend),
+		ACMD_DEF(listenbg),
 	};
 	AtCommandInfo* atcommand;
 	int i;

@@ -127,7 +127,9 @@ unsigned char save_settings = CHARSAVE_ALL;
 bool agit_flag = false;
 bool agit2_flag = false;
 bool agit3_flag = false;
+bool bg_flag = false;
 int night_flag = 0; // 0=day, 1=night [Yor]
+int rain_flag = 0;
 
 #ifdef ADJUST_SKILL_DAMAGE
 struct eri *map_skill_damage_ers = NULL;
@@ -1792,6 +1794,36 @@ int map_addflooritem(struct item *item, int amount, int16 m, int16 x, int16 y, i
 	return fitem->bl.id;
 }
 
+int map_addflooritem_area(struct block_list* bl, int m, int x, int y, int nameid, int amount)
+{
+	struct item item_tmp;
+	int count, range, i;
+	short mx, my;
+
+	memset(&item_tmp, 0, sizeof(item_tmp));
+	item_tmp.nameid = nameid;
+	item_tmp.identify = 1;
+
+	if( bl != NULL ) m = bl->m;
+
+	count = 0;
+	range = (int)sqrt(amount) +2;
+	for( i = 0; i < amount; i++ )
+	{
+		if( bl != NULL )
+			map_search_freecell(bl, 0, &mx, &my, range, range, 0);
+		else
+		{
+			mx = x; my = y;
+			map_search_freecell(NULL, m, &mx, &my, range, range, 1);
+		}
+
+		count += (map_addflooritem(&item_tmp, 1, m, mx, my, 0, 0, 0, 4, 0) != 0) ? 1 : 0;
+	}
+
+	return count;
+}
+
 /**
  * @see DBCreateData
  */
@@ -1859,6 +1891,12 @@ void map_reqnickdb(struct map_session_data * sd, int charid)
 	struct map_session_data* tsd;
 
 	nullpo_retv(sd);
+
+	if (battle_config.reserved_costume_id && battle_config.reserved_costume_id == charid)
+	{
+		clif_solved_charname(sd->fd, charid, "Costume");
+		return;
+	}	
 
 	tsd = map_charid2sd(charid);
 	if( tsd )

@@ -56,6 +56,7 @@ void storage_guild_storageclose(struct map_session_data *sd);
 void storage_guild_storage_quit(struct map_session_data *sd,int flag);
 bool storage_guild_storagesave(uint32 account_id, int guild_id, int flag);
 void storage_guild_storagesaved(int guild_id); //Ack from char server that guild store was saved.
+int storage_additem(struct map_session_data* sd, struct s_storage *stor, struct item *it, int amount);
 
 // Premium Storage [Cydh]
 void storage_premiumStorage_open(struct map_session_data *sd);
@@ -66,6 +67,7 @@ void storage_premiumStorage_close(struct map_session_data *sd);
 void storage_premiumStorage_quit(struct map_session_data *sd);
 
 int compare_item(struct item *a, struct item *b);
+int compare_item_wflag(struct item *a, struct item *b, short flag);
 
 #ifdef __cplusplus
 }

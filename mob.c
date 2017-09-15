@@ -883,7 +883,7 @@ int mob_spawn_guardian(const char* mapname, int16 x, int16 y, const char* mobnam
 /*==========================================
  * Summoning BattleGround [Zephyrus]
  *------------------------------------------*/
-int mob_spawn_bg(const char* mapname, int16 x, int16 y, const char* mobname, int mob_id, const char* event, unsigned int bg_id)
+int mob_spawn_bg(const char* mapname, int16 x, int16 y, const char* mobname, int mob_id, const char* event, int bg_id)
 {
 	struct mob_data *md = NULL;
 	struct spawn_data data;
@@ -4284,6 +4284,51 @@ static int mob_read_sqldb(void)
 	return 0;
 }
 
+
+/*==========================================
+ * MOB add drop custom (Vykimo)
+ *------------------------------------------*/
+static bool mob_readdb_mobadddrop(char* str[], int columns, int current)
+{
+	int mob_id, item_id, j;
+	
+	if( columns != 3 )
+		return false;
+
+	mob_id = atoi(str[0]);
+
+	if(mob_db(mob_id) == mob_dummy)	// invalid class (probably undefined in db)
+	{
+		ShowWarning("mob_readdb_mobadddrop: Unknown mob id %d.\n", mob_id);
+		return false;
+	}
+
+	memset(&mob_db_data[mob_id]->vd, 0, sizeof(struct view_data));
+
+	item_id = atoi(str[1]);
+
+	
+	if( item_id ){
+		if( itemdb_search( item_id ) ){
+			for( j = 0; j < MAX_MOB_DROP; j++ )
+				if(mob_db_data[mob_id]->dropitem[j].nameid==0)	break;
+			if(j < MAX_MOB_DROP) {
+				mob_db_data[mob_id]->dropitem[j].nameid = item_id;
+				mob_db_data[mob_id]->dropitem[j].p = atoi(str[2]);
+			} else {
+				ShowWarning( "mob_readdb_mobadddrop: Monster id: %d is dropping too much items !!\n", mob_id);
+				return false;
+			}
+		}else{
+			ShowWarning( "mob_readdb_mobadddrop: Monster id: %d is dropping an unknown item \"%d\"\n", mob_id, item_id);
+			return false;
+		}
+		
+	}
+	
+	return true;
+}
+
 /*==========================================
  * MOB display graphic change data reading
  *------------------------------------------*/
@@ -5215,6 +5260,7 @@ static void mob_load(void)
 		}
 
 		sv_readdb(dbsubpath1, "mob_avail.txt", ',', 2, 12, -1, &mob_readdb_mobavail, i);
+		sv_readdb(dbsubpath1, "mob_add_drop.txt", ',', 2, 12, -1, &mob_readdb_mobadddrop, i);
 		sv_readdb(dbsubpath2, "mob_race2_db.txt", ',', 2, MAX_RACE2_MOBS, -1, &mob_readdb_race2, i);
 		sv_readdb(dbsubpath1, "mob_item_ratio.txt", ',', 2, 2+MAX_ITEMRATIO_MOBS, -1, &mob_readdb_itemratio, i);
 		sv_readdb(dbsubpath1, "mob_chat_db.txt", '#', 3, 3, MAX_MOB_CHAT, &mob_parse_row_chatdb, i);

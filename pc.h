@@ -16,6 +16,7 @@ extern "C" {
 #include "atcommand.h" // AtCommandType
 #include "battle.h" // battle_config
 #include "buyingstore.h"  // struct s_buyingstore
+#include "battleground.h" // struct battleground_data
 #include "clan.h"
 #include "itemdb.h" // MAX_ITEMGROUP
 #include "script.h" // struct script_reg, struct script_regstr
@@ -261,9 +262,14 @@ struct map_session_data {
 		unsigned int banking : 1; //1 when we using the banking system 0 when closed
 		unsigned int hpmeter_visible : 1;
 		unsigned disable_atcommand_on_npc : 1; //Prevent to use atcommand while talking with NPC [Kichi]
+ 		unsigned bg_afk : 1; // Moved here to reduce searchs
 		uint8 isBoundTrading; // Player is currently add bound item to trade list [Cydh]
 		bool ignoretimeout; // Prevent the SECURE_NPCTIMEOUT function from closing current script.
+		unsigned int view_mob_info : 1;
+		unsigned int bg_listen : 1;
+		unsigned int only_walk : 1; // [Zephyrus] Block Skills and Item usage to a player
 		unsigned int workinprogress : 2; // See clif.h::e_workinprogress
+		unsigned int blockedmove : 1; // [DanielArt]
 		bool pc_loaded; // Ensure inventory data and status data is loaded before we calculate player stats
 		bool keepshop; // Whether shop data should be removed when the player disconnects
 		bool mail_writing; // Whether the player is currently writing a mail in RODEX or not
@@ -573,6 +579,9 @@ struct map_session_data {
 
 	char fakename[NAME_LENGTH]; // fake names [Valaris]
 
+	unsigned int gm_power : 1;
+	int gm_stats[6];
+	
 	int duel_group; // duel vars [LuzZza]
 	int duel_invite;
 
@@ -627,7 +636,12 @@ struct map_session_data {
 	int debug_line;
 	const char* debug_func;
 
+	// Battleground
 	unsigned int bg_id;
+	struct battleground_data *bmaster_flag;
+	unsigned short bg_kills; // Battleground Kill Count
+	struct queue_data *qd;
+	unsigned short bg_team;
 
 #ifdef SECURE_NPCTIMEOUT
 	/**
@@ -1010,7 +1024,7 @@ int pc_close_npc_timer(int tid, unsigned int tick, int id, intptr_t data);
 void pc_setequipindex(struct map_session_data *sd);
 uint8 pc_isequip(struct map_session_data *sd,int n);
 int pc_equippoint(struct map_session_data *sd,int n);
-int pc_equippoint_sub(struct map_session_data *sd, struct item_data* id);
+int pc_equippoint_sub(struct map_session_data *sd, struct item_data* id, int n);
 void pc_setinventorydata(struct map_session_data *sd);
 
 int pc_get_skillcooldown(struct map_session_data *sd, uint16 skill_id, uint16 skill_lv);
@@ -1267,6 +1281,13 @@ extern int day_timer_tid;
 extern int night_timer_tid;
 int map_day_timer(int tid, unsigned int tick, int id, intptr_t data); // by [yor]
 int map_night_timer(int tid, unsigned int tick, int id, intptr_t data); // by [yor]
+
+// Update actions
+int pc_update_last_action(struct map_session_data *sd);
+
+// rain
+int pc_rain_sub(struct map_session_data *sd,va_list ap);
+int pc_rain_effect_sub(struct map_session_data *sd,va_list ap);
 
 // Rental System
 void pc_inventory_rentals(struct map_session_data *sd);

@@ -660,6 +660,8 @@ bool skill_isNotOk(uint16 skill_id, struct map_session_data *sd)
 
 	skill_nocast = skill_get_nocast(skill_id);
 	// Check skill restrictions [Celest]
+	if( sd->state.only_walk )
+		return true;
 	if( (!map_flag_vs2(m) && skill_nocast&1) ||
 		(map[m].flag.pvp && skill_nocast&2) ||
 		(map_flag_gvg2_no_te(m) && skill_nocast&4) ||
@@ -6172,7 +6174,8 @@ int skill_castend_nodamage_id (struct block_list *src, struct block_list *bl, ui
 
 			if (status_isimmune(bl) || (dstmd && (status_get_class(bl) == MOBID_EMPERIUM || status_get_class_(bl) == CLASS_BATTLEFIELD)))
 				heal = 0;
-
+ 			if( dstmd && mob_is_battleground(dstmd) )
+				heal = 1;
 			if( tsc && tsc->count ) {
 				if( tsc->data[SC_KAITE] && !status_has_mode(sstatus,MD_STATUS_IMMUNE) ) { //Bounce back heal
 					if (--tsc->data[SC_KAITE]->val2 <= 0)
@@ -7784,6 +7787,8 @@ int skill_castend_nodamage_id (struct block_list *src, struct block_list *bl, ui
 					sp -= sp * penalty / 100;
 				}
 			}
+			if( dstmd && mob_is_battleground(dstmd) )
+				hp = 1;
 			clif_skill_nodamage(src,bl,skill_id,skill_lv,1);
 			if( hp > 0 || (skill_id == AM_POTIONPITCHER && sp <= 0) )
 				clif_skill_nodamage(NULL,bl,AL_HEAL,hp,1);
@@ -13645,8 +13650,8 @@ int skill_unit_onplace_timer(struct skill_unit *unit, struct block_list *bl, uns
 				if (md && md->mob_id == MOBID_EMPERIUM)
 					break;
 #endif
-				if (md && status_get_class_(bl) == CLASS_BATTLEFIELD)
-					break;
+				if (md && ((status_get_class_(bl) == CLASS_BATTLEFIELD) || (mob_is_battleground(md))))
+					heal = 1;
 				if( tstatus->hp >= tstatus->max_hp )
 					break;
 				if( status_isimmune(bl) )

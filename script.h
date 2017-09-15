@@ -162,6 +162,7 @@ extern struct Script_Config {
 	const char *baselvup_event_name;
 	const char *joblvup_event_name;
 	const char *stat_calc_event_name;
+	const char *consume_event_name; // [ by Emistry ]
 
 	// NPC related
 	const char* ontouch_event_name;

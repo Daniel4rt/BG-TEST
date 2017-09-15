@@ -210,6 +210,7 @@ typedef enum send_target {
 	BG_SAMEMAP_WOS,
 	BG_AREA,
 	BG_AREA_WOS,
+	BG_LISTEN,
 
 	CLAN,				// Clan System
 } send_target;
@@ -538,6 +539,7 @@ void clif_authok(struct map_session_data *sd);
 void clif_authrefuse(int fd, uint8 error_code);
 void clif_authfail_fd(int fd, int type);
 void clif_charselectok(int id, uint8 ok);
+void clif_charnameupdate (struct map_session_data *ssd);
 void clif_dropflooritem(struct flooritem_data* fitem);
 void clif_clearflooritem(struct flooritem_data *fitem, int fd);
 
@@ -777,6 +779,7 @@ void clif_bg_xy_remove(struct map_session_data *sd);
 void clif_bg_message(struct battleground_data *bg, int src_id, const char *name, const char *mes, int len);
 void clif_bg_updatescore(int16 m);
 void clif_bg_updatescore_single(struct map_session_data *sd);
+void clif_bg_updatescore_team(struct battleground_data *bg);
 void clif_sendbgemblem_area(struct map_session_data *sd);
 void clif_sendbgemblem_single(int fd, struct map_session_data *sd);
 
@@ -1039,6 +1042,7 @@ void clif_update_rankingpoint(struct map_session_data *sd, int rankingtype, int 
 void clif_crimson_marker(struct map_session_data *sd, struct block_list *bl, bool remove);
 
 void clif_showscript(struct block_list* bl, const char* message);
+void clif_showscript2(struct block_list* bl, const char* message);
 void clif_party_leaderchanged(struct map_session_data *sd, int prev_leader_aid, int new_leader_aid);
 
 void clif_account_name(int fd, uint32 account_id, const char* accname);

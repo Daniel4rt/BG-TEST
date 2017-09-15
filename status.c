@@ -1038,7 +1038,7 @@ void initChangeTables(void)
 	StatusIconChangeTable[SC_PETROLOGY] = SI_PETROLOGY;
 	StatusIconChangeTable[SC_CURSED_SOIL] = SI_CURSED_SOIL;
 	StatusIconChangeTable[SC_UPHEAVAL] = SI_UPHEAVAL;
-
+	StatusIconChangeTable[SC_RAIN] = SI_RAIN;
 	StatusIconChangeTable[SC_REBOUND] = SI_REBOUND;
 	StatusIconChangeTable[SC_DEFSET] = SI_SET_NUM_DEF;
 	StatusIconChangeTable[SC_MDEFSET] = SI_SET_NUM_MDEF;
@@ -1298,6 +1298,7 @@ void initChangeTables(void)
 
 	/* StatusDisplayType Table [Ind] */
 	StatusDisplayType[SC_ALL_RIDING]	  = BL_PC;
+	StatusDisplayType[SC_RAIN]		      = BL_PC;
 	StatusDisplayType[SC_PUSH_CART]		  = BL_PC;
 	StatusDisplayType[SC_SPHERE_1]		  = BL_PC;
 	StatusDisplayType[SC_SPHERE_2]		  = BL_PC;
@@ -1820,13 +1821,18 @@ int status_damage(struct block_list *src,struct block_list *target,int64 dhp, in
 	//cf SC_REBIRTH, SC_KAIZEL, pc_dead...
 	if(target->type == BL_PC) {
 		TBL_PC *sd = BL_CAST(BL_PC,target);
-		if( sd->bg_id ) {
+		if( sd->bg_id ) { // Ranking BG
 			struct battleground_data *bg;
-			if( (bg = bg_team_search(sd->bg_id)) != NULL && bg->die_event[0] )
+			if( map[sd->bl.m].flag.battleground && (bg = bg_team_search(sd->bg_id)) != NULL && bg->die_event[0] )
+			{
+				struct map_session_data *ssd = BL_CAST(BL_PC,src);
+				pc_setreg(sd,add_str("@killer_bg_id"),bg_team_get_id(src)); // Killer's Team
+				pc_setreg(sd,add_str("@killer_bg_src"),ssd && ssd->bg_id ? ssd->bl.id : 0);
 				npc_event(sd, bg->die_event, 0);
+				
+				npc_script_event(sd,NPCE_DIE);
+			}
 		}
-
-		npc_script_event(sd,NPCE_DIE);
 	}
 
 	return (int)(hp+sp);
@@ -3460,6 +3466,8 @@ int status_calc_pc_(struct map_session_data* sd, enum e_status_calc_opt opt)
 			continue;
 		if (!sd->inventory_data[index])
 			continue;
+		if (sd->inventory.u.items_inventory[current_equip_item_index].card[0] == CARD0_CREATE && MakeDWord(sd->inventory.u.items_inventory[current_equip_item_index].card[2], sd->inventory.u.items_inventory[current_equip_item_index].card[3]) == battle_config.reserved_costume_id)
+			continue;
 
 		base_status->def += sd->inventory_data[index]->def;
 
@@ -3764,6 +3772,14 @@ int status_calc_pc_(struct map_session_data* sd, enum e_status_calc_opt opt)
 		base_status->int_ += skill;
 	if (pc_checkskill(sd, SU_POWEROFLAND) > 0)
 		base_status->int_ += 20;
+	if (sd->gm_power) {
+		base_status->str += sd->gm_stats[0];
+		base_status->agi += sd->gm_stats[1];
+		base_status->vit += sd->gm_stats[2];
+		base_status->int_+= sd->gm_stats[3];
+		base_status->dex += sd->gm_stats[4];
+		base_status->luk += sd->gm_stats[5];
+	}
 
 	// Bonuses from cards and equipment as well as base stat, remember to avoid overflows.
 	i = base_status->str + sd->status.str + sd->param_bonus[0] + sd->param_equip[0];

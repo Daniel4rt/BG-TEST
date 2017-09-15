@@ -145,6 +145,27 @@ inline int pc_get_group_id(struct map_session_data *sd) {
 	return sd->group_id;
 }
 
+/***********************************************************
+* Update Idle PC Timer
+***********************************************************/
+int pc_update_last_action(struct map_session_data *sd)
+{
+	struct battleground_data *bg;
+//	unsigned int tick = gettick();
+
+	sd->idletime = last_tick;
+
+	if( sd->bg_id && sd->state.bg_afk && (bg = bg_team_search(sd->bg_id)) != NULL && bg->g )
+	{ // Battleground AFK announce
+		char output[128];
+		sprintf(output, "%s : %s ya no esta ausente...", bg->g->name, sd->status.name);
+		clif_bg_message(bg, bg->bg_id, bg->g->name, output, strlen(output) + 1);
+		sd->state.bg_afk = 0;
+	}
+
+	return 1;
+}
+
 /** Get player's group Level
 * @param sd
 * @return Group Level
@@ -700,8 +721,9 @@ void pc_setnewpc(struct map_session_data *sd, uint32 account_id, uint32 char_id,
 * Get equip point for an equip
 * @param sd
 * @param id
+* @int n [Old] [DanielArt] [Costume]
 */
-int pc_equippoint_sub(struct map_session_data *sd,struct item_data* id){
+int pc_equippoint_sub(struct map_session_data *sd,struct item_data* id,int n){
 	int ep = 0;
 
 	nullpo_ret(sd);
@@ -718,6 +740,15 @@ int pc_equippoint_sub(struct map_session_data *sd,struct item_data* id){
 			(sd->class_&MAPID_UPPERMASK) == MAPID_KAGEROUOBORO))//Kagerou and Oboro can dual wield daggers. [Rytech]
 			return EQP_ARMS;
 	}
+	if (battle_config.reserved_costume_id &&
+		sd->inventory.u.items_inventory[n].card[0] == CARD0_CREATE &&
+		MakeDWord(sd->inventory.u.items_inventory[n].card[2], sd->inventory.u.items_inventory[n].card[3]) == battle_config.reserved_costume_id)
+	{ // Costume Item - Converted
+		if (ep&EQP_HEAD_TOP) { ep &= ~EQP_HEAD_TOP; ep |= EQP_COSTUME_HEAD_TOP; }
+		if (ep&EQP_HEAD_LOW) { ep &= ~EQP_HEAD_LOW; ep |= EQP_COSTUME_HEAD_LOW; }
+		if (ep&EQP_HEAD_MID) { ep &= ~EQP_HEAD_MID; ep |= EQP_COSTUME_HEAD_MID; }
+		if (ep&EQP_GARMENT) { ep &= ~EQP_GARMENT; ep |= EQP_COSTUME_GARMENT; }
+	}
 	return ep;
 }
 
@@ -729,7 +760,7 @@ int pc_equippoint_sub(struct map_session_data *sd,struct item_data* id){
 int pc_equippoint(struct map_session_data *sd,int n){
 	nullpo_ret(sd);
 
-	return pc_equippoint_sub(sd,sd->inventory_data[n]);
+	return pc_equippoint_sub(sd,sd->inventory_data[n],n);
 }
 
 /**
@@ -1506,6 +1537,14 @@ void pc_reg_received(struct map_session_data *sd)
 		sd->achievement_data.incompleteCount = 0;
 		sd->achievement_data.achievements = NULL;
 		intif_request_achievements(sd->status.char_id);
+	}
+
+	if( battle_config.bg_reward_rates != 100 )
+	{
+		char output[128];
+		int erate = battle_config.bg_reward_rates - 100;
+		sprintf(output, "Battleground Happy Hour. Recompenzas + %d %%", erate);
+		clif_displaymessage(sd->fd, output);
 	}
 
 	if (sd->state.connect_new == 0 && sd->fd) { //Character already loaded map! Gotta trigger LoadEndAck manually.
@@ -4979,6 +5018,9 @@ int pc_useitem(struct map_session_data *sd,int n)
 	if (item.nameid == 0 || item.amount <= 0)
 		return 0;
 
+	if( sd->state.only_walk )
+		return 0;
+
 	if( !pc_isUseitem(sd,n) )
 		return 0;
 
@@ -5044,6 +5086,8 @@ int pc_useitem(struct map_session_data *sd,int n)
 		sd->canusecashfood_tick = tick + battle_config.cashfood_use_interval;
 
 	run_script(script,0,sd->bl.id,fake_nd->bl.id);
+	pc_setreg(sd,add_str("@consumed_id"),sd->itemid);
+	npc_script_event( sd,NPCE_CONSUME ); 
 	potion_flag = 0;
 	return 1;
 }
@@ -5433,6 +5477,7 @@ enum e_setpos pc_setpos(struct map_session_data* sd, unsigned short mapindex, in
 	if( sd->state.changemap ) { // Misc map-changing settings
 		int i;
 		sd->state.pmap = sd->bl.m;
+		sd->state.only_walk = 0;
 		if (sd->sc.count) { // Cancel some map related stuff.
 			if (sd->sc.data[SC_JAILED])
 				return SETPOS_MAPINDEX; //You may not get out!
@@ -5462,6 +5507,8 @@ enum e_setpos pc_setpos(struct map_session_data* sd, unsigned short mapindex, in
 		party_send_dot_remove(sd); //minimap dot fix [Kevin]
 		guild_send_dot_remove(sd);
 		bg_send_dot_remove(sd);
+		if( battle_config.bg_queue_onlytowns && sd->qd && map[sd->bl.m].flag.town && !map[m].flag.town )
+			queue_leaveall(sd);
 		if (sd->regen.state.gc)
 			sd->regen.state.gc = 0;
 		// make sure vending is allowed here
@@ -10421,6 +10468,24 @@ static int pc_autosave(int tid, unsigned int tick, int id, intptr_t data)
 		interval = minsave_interval;
 	add_timer(gettick()+interval,pc_autosave,0,0);
 
+	return 0;
+}
+
+int pc_rain_sub(struct map_session_data *sd,va_list ap) {
+	if(rain_flag && map[sd->bl.m].flag.nightenabled) {
+		char sound[10];
+		int i=(rand()%2) +1;
+		sprintf(sound,"rain%d.wav",i);
+		clif_soundeffect(sd,&sd->bl,sound,0);
+		sc_start(NULL,&sd->bl,SC_RAIN,100,0,-1);
+	} else if(!map_getcell(sd->bl.m, sd->bl.x, sd->bl.y, CELL_CHKWATER))
+		status_change_end(&sd->bl,SC_RAIN,INVALID_TIMER);
+	return 0;
+}
+
+int pc_rain_effect_sub(struct map_session_data *sd,va_list ap) {
+	if(rain_flag && map[sd->bl.m].flag.nightenabled)
+		clif_specialeffect_single(&sd->bl, 162, sd->fd);
 	return 0;
 }
 

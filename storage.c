@@ -194,6 +194,26 @@ int compare_item(struct item *a, struct item *b)
 	return 0;
 }
 
+int compare_item_wflag(struct item *a, struct item *b, short flag)
+{
+	if( a->nameid == b->nameid &&
+		a->identify == b->identify &&
+		a->refine == b->refine &&
+		a->attribute == b->attribute &&
+		(flag&1 || (a->expire_time == b->expire_time && a->bound == b->bound 
+					&& a->unique_id == b->unique_id))
+		)
+	{
+		int i;
+
+		for (i = 0; i < MAX_SLOTS && (a->card[i] == b->card[i]); i++);
+
+		return (i == MAX_SLOTS);
+	}
+
+	return 0;
+}
+
 /**
  * Check if item can be added to storage
  * @param stor Storage data
@@ -252,7 +272,7 @@ static enum e_storage_add storage_canGetItem(struct s_storage *stor, int idx, in
  * @param amount : quantity of items
  * @return 0:success, 1:failed, 2:failed because of room or stack checks
  */
-static int storage_additem(struct map_session_data* sd, struct s_storage *stor, struct item *it, int amount)
+int storage_additem(struct map_session_data* sd, struct s_storage *stor, struct item *it, int amount)
 {
 	struct item_data *data;
 	int i;
