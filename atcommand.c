@@ -822,6 +822,20 @@ ACMD_FUNC(save)
 }
 
 /*==========================================
+ * @seguridad [Remasterized] [DanielArt]
+ *------------------------------------------*/
+ACMD_FUNC(seguridad)
+{
+	nullpo_retr(-1, sd);
+
+	if (sd->npc_id || sd->state.vending || sd->state.buyingstore || sd->state.trading || sd->state.storage_flag)
+		return -1;
+
+	npc_event(sd,"Seguridad::OnSet",0);
+	return 0;
+}
+
+/*==========================================
  *
  *------------------------------------------*/
 ACMD_FUNC(load)
@@ -890,7 +904,10 @@ ACMD_FUNC(storage)
 
 	if (sd->npc_id || sd->state.vending || sd->state.buyingstore || sd->state.trading || sd->state.storage_flag)
 		return -1;
-
+	if (pc_readaccountreg(sd,add_str("#SEC_CODE")) > 0) {
+		clif_displaymessage(sd->fd, "No puedes usar esto. Bloqueado por @seguridad");
+		return -1;
+	}
 	if (storage_storageopen(sd) == 1)
 	{	//Already open.
 		clif_displaymessage(fd, msg_txt(sd,250)); // You have already opened your storage. Close it first.
@@ -10172,6 +10189,7 @@ void atcommand_basecommands(void) {
 		ACMD_DEF2("whomap3", who),
 		ACMD_DEF(whogm),
 		ACMD_DEF(save),
+		ACMD_DEF2("security", seguridad),
 		ACMD_DEF(load),
 		ACMD_DEF(speed),
 		ACMD_DEF(storage),

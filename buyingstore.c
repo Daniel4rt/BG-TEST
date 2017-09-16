@@ -80,6 +80,12 @@ int8 buyingstore_setup(struct map_session_data* sd, unsigned char slots){
 		return 3;
 	}
 
+	if( sd->state.seguridad )
+	{
+		clif_displaymessage(sd->fd, "No puedes abrir la tienda. Bloqueado por @seguridad");
+		return 1;
+	}
+
 	if( map_getcell(sd->bl.m, sd->bl.x, sd->bl.y, CELL_CHKNOVENDING) )
 	{// custom: no vending cells
 		clif_displaymessage(sd->fd, msg_txt(sd,204)); // "You can't open a shop on this cell."

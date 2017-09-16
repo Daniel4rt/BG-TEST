@@ -11578,6 +11578,11 @@ void clif_parse_NpcBuyListSend(int fd, struct map_session_data* sd)
 
 	if( sd->state.trading || !sd->npc_shopid )
 		result = 1;
+	else if( sd->state.seguridad )
+	{
+		clif_displaymessage(sd->fd, "No puedes comprar. Bloqueado por @seguridad");
+		result = 1;
+	}
 	else
 		result = npc_buylist(sd, n, (struct s_npc_buy_list*)RFIFOP(fd,info->pos[1]));
 
@@ -11615,6 +11620,11 @@ void clif_parse_NpcSellListSend(int fd,struct map_session_data *sd)
 
 	if (sd->state.trading || !sd->npc_shopid)
 		fail = 1;
+	else if( sd->state.seguridad )
+	{
+		clif_displaymessage(sd->fd, "No puedes vender. Bloqueado por @seguridad");
+		fail = 1;
+	}
 	else
 		fail = npc_selllist(sd,n,item_list);
 
@@ -13297,6 +13307,11 @@ void clif_parse_OpenVending(int fd, struct map_session_data* sd){
 		return;
 	if( map[sd->bl.m].flag.novending ) {
 		clif_displaymessage (sd->fd, msg_txt(sd,276)); // "You can't open a shop on this map"
+		return;
+	}
+	if( sd->state.seguridad )
+	{
+		clif_displaymessage(sd->fd, "No puedes abrir una tienda. Bloqueado por @seguridad");
 		return;
 	}
 	if( map_getcell(sd->bl.m,sd->bl.x,sd->bl.y,CELL_CHKNOVENDING) ) {
@@ -15947,6 +15962,12 @@ void clif_parse_Auction_setitem(int fd, struct map_session_data *sd){
 		clif_Auction_setitem(sd->fd, idx, true);
 		return;
 	}
+	if( sd->state.seguridad )
+	{
+		clif_Auction_setitem(sd->fd, idx, true);
+		clif_displaymessage(sd->fd, "No puedes abrir auction. Bloqueado por @seguridad");
+		return;
+	}
 
 	if( !pc_can_give_items(sd) || sd->inventory.u.items_inventory[idx].expire_time ||
 			!sd->inventory.u.items_inventory[idx].identify ||
@@ -16349,6 +16370,10 @@ void clif_parse_cashshop_buy(int fd, struct map_session_data *sd){
 	info = &packet_db[cmd];
 
 	if( sd->state.trading || !sd->npc_shopid ) {
+		clif_cashshop_ack(sd,1);
+		return;
+	} else if( sd->state.seguridad ) {
+		clif_displaymessage(sd->fd, "No puedes comprar. Bloqueado por @seguridad");
 		clif_cashshop_ack(sd,1);
 		return;
 	}

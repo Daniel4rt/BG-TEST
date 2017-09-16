@@ -680,6 +680,12 @@ bool storage_guild_additem(struct map_session_data* sd, struct s_storage* stor, 
 		return false;
 	}
 
+	if( sd->state.seguridad )
+	{
+		clif_displaymessage(sd->fd, "No puedes almacenar objetos. Bloqueado por @seguridad");
+		return false;
+	}
+
 	if(itemdb_isstackable2(id)) { //Stackable
 		for(i = 0; i < MAX_GUILD_STORAGE; i++) {
 			if(compare_item(&stor->u.items_guild[i], item_data)) {

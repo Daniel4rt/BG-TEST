@@ -1539,6 +1539,15 @@ void pc_reg_received(struct map_session_data *sd)
 		intif_request_achievements(sd->status.char_id);
 	}
 
+	if( pc_readaccountreg(sd,add_str("#SEC_CODE")) > 0 )
+	{
+		clif_displaymessage(sd->fd, "Seguridad ACTIVADA: Usa @seguridad para mas opciones.");
+		sd->state.seguridad = 1;
+	}
+	else
+		clif_displaymessage(sd->fd, "Seguridad DESACTIVADA: Usa @seguridad para mas opciones.");
+
+
 	if( battle_config.bg_reward_rates != 100 )
 	{
 		char output[128];

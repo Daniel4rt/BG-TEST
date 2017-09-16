@@ -23846,6 +23846,37 @@ BUILDIN_FUNC(setrandomoption) {
 	return SCRIPT_CMD_FAILURE;
 }
 
+/// Define el valor activable del sistema de seguridad.
+/// 0 = Desactiva seguridad
+/// 1 = Activa seguridad
+/// *seguridad(<valor>);
+/// @author [DanielArt]
+BUILDIN_FUNC(seguridad)
+{
+	struct map_session_data *sd = script_rid2sd_verify(st);
+	int value = script_getnum(st,2);
+	if( sd == NULL )
+		return SCRIPT_CMD_FAILURE;
+
+	sd->state.seguridad = (value)?1:0;
+	return SCRIPT_CMD_SUCCESS;
+}
+
+/// Regresa el valor activable del sistema de seguridad.
+/// 0 = Seguridad desactivada
+/// 1 = Seguridad activada
+/// *verseguridad(<valor>);
+/// @author [DanielArt]
+BUILDIN_FUNC(verseguridad)
+{
+	struct map_session_data *sd = script_rid2sd_verify(st);
+	if( sd == NULL )
+		return SCRIPT_CMD_FAILURE;
+
+	script_pushint(st,sd->state.seguridad);
+	return SCRIPT_CMD_SUCCESS;
+}
+
 /// Returns the number of stat points needed to change the specified stat by val.
 /// If val is negative, returns the number of stat points that would be needed to
 /// raise the specified stat from (current value - val) to current value.
@@ -25327,6 +25358,10 @@ struct script_function buildin_func[] = {
 	BUILDIN_DEF(storeitem2,"viiiiiii?"),
 	BUILDIN_DEF(unloadnpc, "s"),
 	BUILDIN_DEF(checkspace,"viiiiiiii"),
+	
+	// Sistema de Seguridad [DanielArt]
+	BUILDIN_DEF2(seguridad,"security","i"),
+	BUILDIN_DEF2(verseguridad,"getsecurity",""),
 
 	// WoE TE
 	BUILDIN_DEF(agitstart3,""),
