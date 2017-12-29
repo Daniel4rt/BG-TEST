@@ -4724,6 +4724,12 @@ bool pc_dropitem(struct map_session_data *sd,int n,int amount)
 		)
 		return false;
 
+	if( sd->state.seguridad )
+	{
+		clif_displaymessage(sd->fd, "No puedes dropear objetos. Bloqueado por @seguridad");
+		return;
+	}
+
 	if( map[sd->bl.m].flag.nodrop )
 	{
 		clif_displaymessage (sd->fd, msg_txt(sd,271));
